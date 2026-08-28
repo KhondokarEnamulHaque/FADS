@@ -1,0 +1,2524 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fire Alarm & Detection System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root {
+            --bg: #090b0e;
+            --card-bg: #12161f;
+            --input-bg: #0a0c10;
+            --main-green: #01C851;
+            --neon-green: #39FF14;
+            --text-white: #FFFFFF;
+            --text-sub: #8b95a5;
+            --border: #1e2634;
+            --glow: rgba(57, 255, 20, 0.2);
+            --danger: #ff4444;
+            --accent-blue: #00b0ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-white);
+            min-height: 100vh;
+            padding: 16px 0 90px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .svg-icon {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            width: 100%;
+            background: rgba(10, 12, 16, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            z-index: 1000;
+            padding: 6px 12px 10px 12px;
+            display: flex; justify-content: center;
+            box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.9);
+        }
+
+        .bottom-nav-container {
+            width: 100%; max-width: 520px;
+            display: flex; align-items: center; justify-content: space-around;
+        }
+
+        .bottom-nav-item {
+            background: transparent; border: none;
+            color: var(--text-sub);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 4px; font-size: 10px; font-weight: 700; cursor: pointer;
+            padding: 6px 8px; border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none; flex: 1;
+        }
+
+        .bottom-nav-item svg {
+            width: 20px; height: 20px; fill: none;
+            stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
+            transition: all 0.2s ease;
+        }
+
+        .bottom-nav-item:hover, .bottom-nav-item:focus { color: var(--neon-green); }
+        .bottom-nav-item:hover svg, .bottom-nav-item:focus svg {
+            stroke: var(--neon-green); transform: translateY(-2px);
+            filter: drop-shadow(0 0 6px var(--neon-green));
+        }
+
+        .bottom-nav-item.admin-btn { color: #ff9800; }
+        .bottom-nav-item.admin-btn svg { stroke: #ff9800; }
+        .bottom-nav-item.admin-btn:hover { color: var(--neon-green); }
+        .bottom-nav-item.admin-btn:hover svg { stroke: var(--neon-green); }
+
+        .container { width: 100%; max-width: 520px; margin: 0 auto; padding: 0 12px; }
+
+        .header-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px; padding: 20px 16px;
+            text-align: center; margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .system-title {
+            color: var(--neon-green); font-size: 13px; font-weight: 800;
+            letter-spacing: 1px; text-transform: uppercase;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 12px; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+
+        .card-box {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 20px; padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .card-box:hover {
+            box-shadow: 0 6px 20px rgba(57, 255, 20, 0.05);
+            border-color: rgba(57, 255, 20, 0.2);
+        }
+
+        .card-title {
+            font-size: 14px; color: var(--neon-green); margin-bottom: 16px;
+            font-weight: 800; text-transform: uppercase;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 6px;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 10px;
+        }
+
+        .card-title-text {
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+        .form-grid.single-col { grid-template-columns: 1fr; }
+        
+        .field-group { display: flex; flex-direction: column; }
+        .field-group.full-width { grid-column: 1 / -1; }
+        
+        .field-group label {
+            font-size: 11px; font-weight: 700; color: var(--main-green);
+            margin-bottom: 8px; text-transform: uppercase; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+            display: flex; align-items: center; gap: 6px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-wrapper .input-icon {
+            position: absolute;
+            left: 12px;
+            color: var(--text-sub);
+        }
+
+        .input-wrapper input, .input-wrapper select, .field-group textarea {
+            width: 100%; height: 46px; background: var(--input-bg);
+            border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text-white); font-size: 13px; font-weight: 700;
+            padding: 0 10px 0 38px; outline: none; transition: all 0.2s ease;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .field-group select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        .input-wrapper input:disabled {
+            background: #181c24;
+            color: #555d6d;
+            border-color: #242c3d;
+            cursor: not-allowed;
+        }
+
+        .input-wrapper input:focus, .input-wrapper select:focus, .field-group textarea:focus {
+            border-color: var(--neon-green); box-shadow: 0 0 10px var(--glow), inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .input-wrapper input:focus + .input-icon, .input-wrapper select:focus + .input-icon {
+            color: var(--neon-green);
+        }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 10px;}
+
+        .btn {
+            height: 46px; border: none; border-radius: 12px;
+            font-size: 13px; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; text-transform: uppercase; transition: all 0.3s;
+        }
+
+        .btn-search { 
+            flex: 2; background: linear-gradient(135deg, var(--neon-green), #01C851); 
+            color: #000; box-shadow: 0 4px 15px rgba(57, 255, 20, 0.3); 
+        }
+        .btn-search:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(57, 255, 20, 0.4); }
+        
+        .btn-excel { background: linear-gradient(135deg, var(--accent-blue), #0081cb); color: #000; font-size: 11px; padding: 0 10px; height: 38px; }
+        
+        .btn-clear { flex: 1; background: #1e2229; color: var(--text-white); border: 1px solid var(--border); }
+        .btn-clear:hover { background: #2a2f38; border-color: var(--text-sub); }
+        
+        .btn-action { background: #1a202c; color: var(--neon-green); border: 1px solid var(--border); padding: 8px 12px; font-size: 11px; border-radius: 8px; transition: all 0.2s;}
+        .btn-action:hover { background: rgba(57, 255, 20, 0.1); border-color: var(--neon-green); }
+
+        #adminSection { 
+            display: none; border: 1px solid var(--neon-green); 
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.12);
+            background: linear-gradient(180deg, #12161f 0%, #0d0f15 100%);
+        }
+
+        .excel-import-box {
+            background: rgba(0, 176, 255, 0.05);
+            border: 1px dashed var(--accent-blue);
+            border-radius: 12px; padding: 14px; margin-bottom: 16px;
+        }
+
+        .admin-profile-box {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border); border-radius: 12px;
+            padding: 10px; margin-bottom: 16px;
+        }
+        .admin-avatar {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--neon-green); background: #000;
+        }
+        .admin-info { flex: 1; }
+        .admin-info strong { display: block; font-size: 13px; color: #fff; }
+        .admin-info span { font-size: 10px; color: var(--text-sub); }
+
+        .btn-logout {
+            background: rgba(255, 68, 68, 0.1); color: var(--danger);
+            border: 1px solid rgba(255, 68, 68, 0.3); padding: 6px 12px;
+            border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .btn-logout:hover { background: rgba(255, 68, 68, 0.2); }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+
+        .summary-box {
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px;
+            display: flex; flex-direction: column; gap: 8px;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .summary-box::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+            background: var(--neon-green); opacity: 0.5;
+        }
+        .summary-box:hover {
+            border-color: rgba(57, 255, 20, 0.4);
+            transform: translateY(-2px);
+        }
+        .summary-box:hover::before { opacity: 1; box-shadow: 0 0 8px var(--neon-green); }
+
+        .summary-header {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .summary-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; color: var(--text-sub); font-weight: 700;
+        }
+
+        .summary-val { font-size: 18px; color: var(--neon-green); font-weight: 900; }
+        .summary-pct { font-size: 10px; color: var(--accent-blue); background: rgba(0, 176, 255, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+        .summary-box.total-box {
+            grid-column: span 2; border-color: var(--neon-green);
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.1), rgba(0,0,0,0)); 
+            padding: 16px; box-shadow: 0 0 15px rgba(57, 255, 20, 0.1);
+        }
+        .summary-box.total-box::before { width: 4px; opacity: 1; }
+        .summary-box.total-box .summary-label { font-size: 13px; color: var(--text-white); font-weight: 800; }
+        .summary-box.total-box .summary-val { font-size: 24px; }
+
+        .chart-container {
+            position: relative; width: 100%; height: 230px;
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .table-wrapper {
+            max-height: 320px; overflow-y: auto;
+            border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg);
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        th { background: #161b26; color: var(--neon-green); padding: 12px 8px; position: sticky; top: 0; font-weight: 800; border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 10; }
+        td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: #e2e8f0; vertical-align: middle; word-break: break-word; }
+        tr:hover { background: rgba(57, 255, 20, 0.05); }
+
+        .action-btn-group { display: flex; gap: 4px; }
+        .action-icon-btn {
+            background: transparent; border: 1px solid var(--border);
+            border-radius: 6px; padding: 4px 6px; cursor: pointer;
+            font-size: 12px; transition: all 0.2s;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .action-icon-btn.edit { color: var(--accent-blue); border-color: rgba(0, 176, 255, 0.3); }
+        .action-icon-btn.edit:hover { background: rgba(0, 176, 255, 0.1); }
+        .action-icon-btn.delete { color: var(--danger); border-color: rgba(255, 68, 68, 0.3); }
+        .action-icon-btn.delete:hover { background: rgba(255, 68, 68, 0.1); }
+
+        .batch-action-bar {
+            background: rgba(255, 68, 68, 0.08); border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 10px; padding: 8px 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 16px; z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-overlay.active .modal-card { transform: scale(1) translateY(0); opacity: 1; }
+
+        .modal-card {
+            background: #121620; border: 1px solid var(--border);
+            border-radius: 24px; width: 100%; max-width: 440px;
+            padding: 24px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(57, 255, 20, 0.1);
+            max-height: 90vh; overflow-y: auto;
+            transform: scale(0.95) translateY(10px); opacity: 0; transition: all 0.3s ease;
+        }
+        
+        .modal-card.success-glow { border-color: var(--neon-green); box-shadow: 0 0 30px rgba(57,255,20,0.15), inset 0 0 20px rgba(57,255,20,0.05); }
+        .modal-card.error-glow { border-color: var(--danger); box-shadow: 0 0 30px rgba(255,68,68,0.15), inset 0 0 20px rgba(255,68,68,0.05); }
+
+        .close-icon-btn {
+            background: #232730; border: none; color: var(--text-sub);
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; cursor: pointer; transition: all 0.2s;
+        }
+        .close-icon-btn:hover { background: #ff4444; color: #fff; transform: rotate(90deg); }
+
+        .popup-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; border-bottom: 1px dashed var(--border); padding-bottom: 12px;
+        }
+        .popup-header-title {
+            display: flex; align-items: center; gap: 10px;
+            color: var(--text-white); font-size: 16px; font-weight: 800; letter-spacing: 0.5px;
+        }
+        
+        .popup-location-card {
+            background: linear-gradient(to right, rgba(57, 255, 20, 0.1), rgba(57, 255, 20, 0.02));
+            border-left: 4px solid var(--neon-green);
+            border-radius: 8px; padding: 16px;
+            margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px;
+        }
+        .popup-location-card .loc-icon { 
+            background: rgba(57, 255, 20, 0.2); padding: 8px; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .popup-location-card .loc-details { flex: 1; }
+        .popup-location-card .loc-title { font-size: 10px; color: var(--main-green); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px;}
+        .popup-location-card .loc-text { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.4; }
+
+        .popup-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .popup-info-item {
+            background: var(--input-bg); border: 1px solid var(--border);
+            padding: 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .popup-info-item.full { grid-column: span 2; flex-direction: row; justify-content: space-between; align-items: center;}
+        
+        .popup-info-item .item-label { color: var(--text-sub); display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 10px; text-transform: uppercase;}
+        .popup-info-item .item-val { font-weight: 800; color: #fff; font-size: 13px;}
+        .popup-info-item .item-val.highlight { color: var(--neon-green); font-size: 14px; background: rgba(57,255,20,0.1); padding: 2px 8px; border-radius: 4px;}
+
+        .footer-credit { text-align: center; padding: 16px 0 20px 0; font-size: 12px; color: var(--text-sub); }
+        .footer-credit a { color: var(--neon-green); text-decoration: none; font-weight: 700; transition: color 0.2s;}
+        .footer-credit a:hover { color: #fff; text-shadow: 0 0 5px var(--neon-green); }
+        
+        .badge-type { background: rgba(57, 255, 20, 0.1); color: var(--neon-green); padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 10px; display: inline-block;}
+        .model-text { color: var(--accent-blue); font-weight: 700; font-size: 11px; }
+
+        .activity-log-item {
+            border-bottom: 1px solid var(--border);
+            padding: 10px 0;
+            font-size: 11px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .activity-log-item:last-child { border-bottom: none; }
+        .log-time { color: var(--text-sub); font-size: 9px; display: flex; align-items: center; gap: 4px;}
+        .log-user { color: var(--neon-green); font-weight: bold; }
+
+        .device-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--neon-green); }
+        
+        /* Utility styles for inputs */
+        input[type="text"]::-webkit-input-placeholder, 
+        input[type="number"]::-webkit-input-placeholder, 
+        input[type="password"]::-webkit-input-placeholder {
+            color: #4a5568;
+            font-weight: 600;
+        }
+    
+        /* ===== ALL DEVICE LIST — PREMIUM BORDERED UI ===== */
+        #listSec {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(57, 255, 20, 0.45);
+            border-radius: 22px;
+            padding: 0;
+            background:
+                linear-gradient(180deg, rgba(18, 22, 31, 0.98), rgba(8, 11, 15, 0.98));
+            box-shadow:
+                0 0 0 1px rgba(57, 255, 20, 0.06),
+                0 10px 35px rgba(0, 0, 0, 0.45),
+                inset 0 0 28px rgba(57, 255, 20, 0.025);
+        }
+
+        #listSec::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
+            box-shadow: 0 0 14px rgba(57, 255, 20, 0.55);
+            z-index: 2;
+        }
+
+        #listSec > .card-title {
+            position: relative;
+            margin: 0;
+            padding: 16px 16px 14px;
+            min-height: 58px;
+            border-bottom: 1px solid rgba(57, 255, 20, 0.16) !important;
+            background: linear-gradient(180deg, rgba(57, 255, 20, 0.07), rgba(57, 255, 20, 0.015));
+            border-radius: 21px 21px 0 0;
+        }
+
+        #listSec > .card-title .card-title-text {
+            color: #fff;
+            letter-spacing: 0.35px;
+        }
+
+        #listSec > .card-title .card-title-text svg {
+            filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.45));
+        }
+
+        #listSec > .card-title .btn-action {
+            height: 34px;
+            padding: 0 9px;
+            border-radius: 9px;
+            background: rgba(10, 14, 19, 0.9);
+            border-color: rgba(57, 255, 20, 0.20);
+            color: var(--text-sub);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+        }
+
+        #listSec > .card-title .btn-action:hover {
+            color: var(--neon-green);
+            border-color: rgba(57, 255, 20, 0.55);
+            background: rgba(57, 255, 20, 0.08);
+            box-shadow: 0 0 12px rgba(57, 255, 20, 0.10);
+        }
+
+        #listSec > .list-filter-panel {
+            margin: 14px 14px 16px !important;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            background: linear-gradient(180deg, rgba(10, 13, 18, 0.95), rgba(6, 8, 11, 0.92));
+            box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.30);
+        }
+
+        #listSec > .list-filter-panel select,
+        #listSec > .list-filter-panel .input-wrapper input {
+            border-color: #263044 !important;
+            transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+
+        #listSec > .list-filter-panel select:focus,
+        #listSec > .list-filter-panel .input-wrapper input:focus {
+            border-color: var(--neon-green) !important;
+            box-shadow: 0 0 0 2px rgba(57, 255, 20, 0.07), 0 0 12px rgba(57, 255, 20, 0.12) !important;
+        }
+
+        #listSec > .table-wrapper {
+            margin: 0 14px 14px;
+            max-height: 390px;
+            overflow: auto;
+            border: 1px solid rgba(57, 255, 20, 0.20);
+            border-radius: 16px;
+            background: #080b10;
+            box-shadow:
+                inset 0 0 22px rgba(0, 0, 0, 0.55),
+                0 0 0 1px rgba(255,255,255,0.015);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(57,255,20,.55) #0b0e13;
+        }
+
+        #listSec > .table-wrapper::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        #listSec > .table-wrapper::-webkit-scrollbar-track {
+            background: #0b0e13;
+            border-radius: 10px;
+        }
+
+        #listSec > .table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(57,255,20,.45);
+            border-radius: 10px;
+            border: 1px solid #0b0e13;
+        }
+
+        #listSec > .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-green);
+        }
+
+        #listSec table {
+            min-width: 760px;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+        }
+
+        #listSec table th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            height: 44px;
+            padding: 10px 9px;
+            color: var(--neon-green);
+            background: linear-gradient(180deg, #1a202b, #131822);
+            border-bottom: 1px solid rgba(57, 255, 20, 0.28);
+            border-right: 1px solid rgba(255,255,255,0.035);
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,.35);
+        }
+
+        #listSec table th:first-child {
+            border-top-left-radius: 14px;
+        }
+
+        #listSec table th:last-child {
+            border-right: none;
+            border-top-right-radius: 14px;
+        }
+
+        #listSec table td {
+            min-height: 48px;
+            padding: 11px 9px;
+            color: #e5eaf2;
+            background: rgba(8, 11, 16, 0.96);
+            border-bottom: 1px solid #1b2330;
+            border-right: 1px solid rgba(255,255,255,0.025);
+            vertical-align: middle;
+            white-space: nowrap;
+            word-break: normal;
+            line-height: 1.45;
+        }
+
+        #listSec table td:last-child {
+            border-right: none;
+        }
+
+        #listSec table tbody tr {
+            transition: background .18s ease, box-shadow .18s ease;
+        }
+
+        #listSec table tbody tr:nth-child(even) td {
+            background: rgba(14, 18, 25, 0.96);
+        }
+
+        #listSec table tbody tr:hover td {
+            background: rgba(57, 255, 20, 0.055);
+            border-bottom-color: rgba(57, 255, 20, 0.20);
+        }
+
+        #listSec table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        #listSec table td b {
+            color: #f3f6fa;
+            font-weight: 900;
+        }
+
+        #listSec .badge-type {
+            min-width: 34px;
+            text-align: center;
+            padding: 5px 8px;
+            border: 1px solid rgba(57,255,20,.22);
+            background: linear-gradient(135deg, rgba(57,255,20,.15), rgba(57,255,20,.045));
+            box-shadow: inset 0 0 8px rgba(57,255,20,.04);
+        }
+
+        #listSec .model-text {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: rgba(0,176,255,.06);
+            border: 1px solid rgba(0,176,255,.12);
+        }
+
+        #listSec table td small {
+            white-space: normal;
+        }
+
+        #listSec .batch-action-bar {
+            margin: 0 14px 12px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 14px rgba(255,68,68,.04);
+        }
+
+        @media (max-width: 520px) {
+            #listSec {
+                border-radius: 20px;
+            }
+
+            #listSec > .card-title {
+                padding: 15px 14px 13px;
+            }
+
+            #listSec > .card-title .btn-action {
+                font-size: 10px;
+                padding: 0 7px;
+            }
+
+            #listSec > .list-filter-panel {
+                margin: 12px 10px 14px !important;
+                padding: 10px;
+            }
+
+            #listSec > .table-wrapper {
+                margin: 0 10px 10px;
+                border-radius: 14px;
+            }
+
+            #listSec table {
+                min-width: 760px;
+            }
+        }
+
+
+        /* ===== DEVICE SUMMARY — REFINED UI (palette preserved) ===== */
+        #summarySec {
+            position: relative;
+            overflow: hidden;
+        }
+
+        #summarySec > .card-title {
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+        }
+
+        #summarySec .summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        #summarySec .summary-box {
+            min-height: 82px;
+            padding: 13px 13px 12px 15px;
+            border-radius: 14px;
+            gap: 9px;
+            justify-content: center;
+            isolation: isolate;
+        }
+
+        #summarySec .summary-box::after {
+            content: '';
+            position: absolute;
+            right: -18px;
+            top: -18px;
+            width: 58px;
+            height: 58px;
+            border: 1px solid rgba(57,255,20,0.08);
+            border-radius: 50%;
+            box-shadow: 0 0 0 7px rgba(57,255,20,0.018);
+            pointer-events: none;
+        }
+
+        #summarySec .summary-header {
+            min-height: 22px;
+            gap: 8px;
+        }
+
+        #summarySec .summary-label {
+            gap: 8px;
+            font-size: 10px;
+            letter-spacing: .15px;
+            line-height: 1.3;
+        }
+
+        #summarySec .summary-label .svg-icon {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            color: var(--neon-green);
+            filter: drop-shadow(0 0 4px rgba(57,255,20,.22));
+        }
+
+        #summarySec .summary-val {
+            display: block;
+            font-size: 21px;
+            line-height: 1;
+            padding-left: 26px;
+        }
+
+        #summarySec .summary-box.total-box {
+            min-height: 98px;
+            padding: 16px;
+            grid-column: span 2;
+            border-radius: 16px;
+        }
+
+        #summarySec .summary-box.total-box .summary-label {
+            font-size: 12px;
+        }
+
+        #summarySec .summary-box.total-box .summary-val {
+            font-size: 28px;
+            padding-left: 28px;
+        }
+
+        #summarySec .chart-container {
+            height: 245px;
+            padding: 14px 12px 10px;
+            border-radius: 16px;
+        }
+
+        #summarySec .chart-container::before {
+            content: 'DEVICE DISTRIBUTION';
+            position: absolute;
+            top: 9px;
+            left: 13px;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .8px;
+            color: var(--text-sub);
+            pointer-events: none;
+        }
+
+        @media (max-width: 520px) {
+            #summarySec .summary-grid {
+                gap: 9px;
+            }
+
+            #summarySec .summary-box {
+                min-height: 78px;
+                padding: 12px 11px 11px 13px;
+            }
+
+            #summarySec .summary-val {
+                font-size: 19px;
+            }
+
+            #summarySec .summary-box.total-box .summary-val {
+                font-size: 26px;
+            }
+
+            #summarySec .chart-container {
+                height: 235px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="top">
+    <div class="header-card">
+        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjej6UwzZQaW4PD07wwgK_5DRR4WUL5NviunjdfrJxe39o4hYJ4yn_ISS0LztuEb0WYBYpEuTJs5CJUw2j1spQqM13OGy6uVxPVHKTYABrG0W4YKhn_Jfu5serD4-ZB1Ci4lazIdXGPZJaU-lh3dPwHlBbhcpS1-qCHjuUvFLCK8vcGgsoa0S7zdZSUkcUM/s500/1000038750.png" alt="Fakir Apparels Logo" class="header-logo">
+        <div class="system-title">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green);"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 3.5z"></path></svg>
+            Fire Alarm & Detection System
+        </div>
+    </div>
+
+    <div class="card-box search-card" id="searchSec">
+        <div class="card-title">
+            <span class="card-title-text">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green); width:20px; height:20px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                দ্রুত সার্চ করুন (SEARCH)
+            </span>
+        </div>
+        <form id="searchForm" onsubmit="handleSearch(event)">
+            <div class="form-grid">
+                <div class="field-group full-width">
+                    <label>
+                        প্যানেল নম্বর
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="svg-icon input-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                        <select id="panel" required><option value="">প্যানেল বেছে নিন</option></select>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label>
+                        টাইপ (TYPE)
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="svg-icon input-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                        <select id="searchCategory" onchange="updateSearchSubOptions()" required>
+                            <option value="">লুপ / ন্যাক</option>
+                            <option value="loop">Loop</option>
+                            <option value="panel_nac">Panel Nac</option>
+                            <option value="nac_std">NAC Standard</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label id="searchSubLabel">
+                        LOOP / NAC NO.
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="svg-icon input-icon" viewBox="0 0 24 24"><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                        <select id="searchSubVal" required>
+                            <option value="">নির্বাচন করুন</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label id="searchAddrLabel">
+                        ডিভাইস নম্বর (ADDRESS NO.)
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="svg-icon input-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <input type="number" id="address" placeholder="যেমন: ৩" required min="1">
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-search">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#000;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    খুঁজুন
+                </button>
+                <button type="button" class="btn btn-clear" onclick="resetSearchForm()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                    রিসেট
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-box" id="adminSection">
+        <div class="card-title">
+            <span class="card-title-text">
+                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                অ্যাডমিন কন্ট্রোল (ADD DEVICE)
+            </span>
+            <button type="button" class="btn-logout" onclick="logoutAdmin()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                LOGOUT
+            </button>
+        </div>
+
+        <div class="admin-profile-box">
+            <img id="currentAdminAvatar" class="admin-avatar" src="" alt="Profile">
+            <div class="admin-info">
+                <strong id="currentAdminName">--</strong>
+                <span id="currentAdminRole">--</span>
+            </div>
+            <button type="button" class="btn btn-action" onclick="openProfileModal()">✏️ Edit</button>
+        </div>
+
+        <div class="excel-import-box" style="border-color: var(--neon-green); background: rgba(57, 255, 20, 0.03); margin-bottom: 12px;">
+            <label style="font-size:11px; font-weight:bold; color:var(--neon-green); display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green);"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                ডাটাবেজ ব্যাকআপ ও রিস্টোর
+            </label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button type="button" class="btn btn-excel" style="background:linear-gradient(135deg, var(--neon-green), #01C851);" onclick="backupToMobile()">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#000; width:14px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                    লোকাল ব্যাকআপ
+                </button>
+                <button type="button" class="btn btn-excel" style="background:linear-gradient(135deg, #ff9800, #f57c00);" onclick="backupToGoogleDrive()">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#000; width:14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+                    ক্লাউড ড্রাইভ
+                </button>
+            </div>
+        </div>
+
+        <div class="excel-import-box">
+            <label style="font-size:11px; font-weight:bold; color:var(--accent-blue); display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--accent-blue);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                EXCEL / CSV ডাটা বাল্ক আপলোড
+            </label>
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="height: auto; padding: 6px; font-size:11px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; width:100%; margin-bottom:10px; color:#fff;" />
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button type="button" class="btn btn-excel" onclick="importExcelData()">📤 আপলোড ফাইল</button>
+                <button type="button" class="btn btn-action" style="height:38px;" onclick="downloadSampleExcel()">📥 ডেমো ফাইল</button>
+            </div>
+        </div>
+
+        <form id="addDeviceForm" onsubmit="handleAddDevice(event)" style="margin-top: 16px;">
+            <div class="form-grid">
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg> Panel No</label>
+                    <div class="input-wrapper">
+                        <select id="addPanel" required><option value="">প্যানেল বেছে নিন</option></select>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Type</label>
+                    <div class="input-wrapper">
+                        <select id="addCategory" onchange="updateAdminSubOptions()" required>
+                            <option value="">লুপ/ন্যাক</option>
+                            <option value="loop">Loop</option>
+                            <option value="panel_nac">Panel Nac</option>
+                            <option value="nac_std">NAC Standard</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label id="addSubLabel">➰ Loop No</label>
+                    <div class="input-wrapper">
+                        <select id="addSubVal" required>
+                            <option value="">নির্বাচন করুন</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label id="addNumLabel">🔢 Address No.</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="addAddress" placeholder="যেমন: ১" required min="1">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 13l-7 7-10-10V4h6z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg> Code (Type)</label>
+                    <div class="input-wrapper">
+                        <select id="addType" onchange="checkCustomDeviceTypeFields()" required>
+                            <option value="">ডিভাইস টাইপ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group full-width" id="isoFieldGroup" style="display:none;">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> ISO পজিশন বিবরণ</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="addIsoInfo" placeholder="যেমন: ডিভাইস ১০ এর পরে এবং ১১ এর আগে">
+                    </div>
+                </div>
+
+                <div class="field-group full-width" id="customSounderGroup" style="display:none;">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a9 9 0 0 1 0 12"></path></svg> সাউন্ডারের নাম</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="addCustomSounder" placeholder="যেমন: System Sensor Horn">
+                    </div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 13l-7 7-10-10V4h6z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg> প্রোডাক্ট মডেল নম্বর</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="addModelNo" placeholder="যেমন: ALCP-100 / VF6011-00">
+                    </div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg> নোট (NOTE)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="addNote" placeholder="অতিরিক্ত কোনো নোট থাকলে লিখুন">
+                    </div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"></path><circle cx="12" cy="10" r="2.5"></circle></svg> লোকেশন তথ্য</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="addLocation" placeholder="যেমন: FAL 35 East side" required>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-search" style="width:100%; margin-top:8px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#000;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                নতুন ডিভাইস যোগ করুন
+            </button>
+        </form>
+
+        <div style="margin-top:24px; border-top: 1px dashed var(--border); padding-top:16px;">
+            <div class="card-title" style="border:none; padding:0; font-size:12px;">
+                <span class="card-title-text" style="color:var(--text-sub);">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 15v4a2 2 0 0 0 2 2h16v-4"></path><path d="M3 7v8"></path></svg>
+                    ইউজার এক্টিভিটি লগ (AUDIT TRAIL)
+                </span>
+            </div>
+            <div class="table-wrapper" style="max-height:180px; background:rgba(0,0,0,0.2);">
+                <div id="activityLogList" style="padding:12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-box" id="summarySec">
+        <div class="card-title">
+            <span class="card-title-text">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green); width:20px; height:20px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                ডিভাইস সামারি ও গ্রাফ
+            </span>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-box total-box">
+                <div class="summary-header">
+                    <span class="summary-label">
+                        <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#fff;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                        সর্বমোট ডিভাইস
+                    </span>
+                </div>
+                <strong class="summary-val" id="sumTotal">0</strong>
+            </div>
+
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg> মোট প্যানেল</span>
+                </div>
+                <strong class="summary-val" id="sumPanels">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg> মোট লুপ</span>
+                </div>
+                <strong class="summary-val" id="sumLoops">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg> স্মোক (SD)</span>
+                </div>
+                <strong class="summary-val" id="sumSD">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg> হিট (HD)</span>
+                </div>
+                <strong class="summary-val" id="sumHD">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 3.5z"></path></svg> মাল্টি (MD)</span>
+                </div>
+                <strong class="summary-val" id="sumMD">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="12" cy="12" r="4"></circle></svg> MCP</span>
+                </div>
+                <strong class="summary-val" id="sumMCP">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline></svg> ইনপুট (AIM)</span>
+                </div>
+                <strong class="summary-val" id="sumAIM">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"></polyline><path d="M5 21h14"></path></svg> আউটপুট (AOM)</span>
+                </div>
+                <strong class="summary-val" id="sumAOM">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> আইসোলেটর</span>
+                </div>
+                <strong class="summary-val" id="sumISO">0</strong>
+            </div>
+            
+            <div class="summary-box">
+                <div class="summary-header">
+                    <span class="summary-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path></svg> Sounders</span>
+                </div>
+                <strong class="summary-val" id="sumSounders">0</strong>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="deviceChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card-box" id="listSec">
+        <div class="card-title" style="flex-wrap: wrap;">
+            <span class="card-title-text">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green); width:20px; height:20px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                অল ডিভাইস লিস্ট
+            </span>
+            <div style="display:flex; gap:6px; margin-top: 8px;">
+                <button class="btn btn-action" onclick="window.print()">🖨️ প্রিন্ট</button>
+                <button class="btn btn-action" onclick="exportToExcel()">📊 EXCEL ডাউনলোড</button>
+            </div>
+        </div>
+
+        <div class="list-filter-panel" style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <select id="filterPanel" onchange="renderTable()" style="height:42px; background:var(--input-bg); border:1px solid var(--border); color:#fff; border-radius:10px; padding:0 10px; font-weight:600;">
+                    <option value="">সকল প্যানেল</option>
+                </select>
+                <select id="filterCode" onchange="renderTable()" style="height:42px; background:var(--input-bg); border:1px solid var(--border); color:#fff; border-radius:10px; padding:0 10px; font-weight:600;">
+                    <option value="">সকল ডিভাইস টাইপ</option>
+                    <option value="SD">SD</option>
+                    <option value="HD">HD</option>
+                    <option value="MD">MD</option>
+                    <option value="MCP">MCP</option>
+                    <option value="AIM">AIM</option>
+                    <option value="AOM">AOM</option>
+                    <option value="ISO">ISO</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <svg class="svg-icon input-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="filterText" placeholder="লোকেশন সার্চ করুন..." oninput="renderTable()" style="width:100%; border-radius:10px;">
+            </div>
+        </div>
+
+        <div id="batchActionBar" class="batch-action-bar admin-col" style="display:none;">
+            <div style="font-size:11px; font-weight:700; color:#fff;">
+                <span id="selectedCount" style="color:var(--danger); font-size:14px; font-weight:900;">0</span> টি সিলেক্ট করা হয়েছে
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-logout" style="padding:6px 12px; background:var(--danger); color:#000; font-weight:800;" onclick="deleteSelectedDevices()">
+                    🗑️ সিলেক্টেড ডিলিট
+                </button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="admin-col" style="display:none; text-align:center; width:30px;">
+                            <input type="checkbox" id="selectAllCheckbox" class="device-checkbox" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>Panel</th>
+                        <th>Loop / Nac</th>
+                        <th>Address</th>
+                        <th>Type</th>
+                        <th>Model</th>
+                        <th>Location</th>
+                        <th class="admin-col" style="display:none; text-align:center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="deviceTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="footer-credit">
+        Developed by <a href="https://facebook.com/KhondokarEnamulHaque" target="_blank" rel="noopener noreferrer">Khondokar Enamul Haque</a>
+    </footer>
+</div>
+
+<nav class="bottom-nav">
+    <div class="bottom-nav-container">
+        <button class="bottom-nav-item" onclick="scrollToSec('top')">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Home</span>
+        </button>
+        <button class="bottom-nav-item" onclick="scrollToSec('searchSec')">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Search</span>
+        </button>
+        <button class="bottom-nav-item" onclick="scrollToSec('summarySec')">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Analytics</span>
+        </button>
+        <button class="bottom-nav-item" onclick="scrollToSec('listSec')">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>List</span>
+        </button>
+        <button class="bottom-nav-item admin-btn" onclick="toggleAdminPrompt()">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span id="adminNavLabel">Admin</span>
+        </button>
+    </div>
+</nav>
+
+<div id="adminAuthModal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="color:var(--neon-green); display:flex; align-items:center; gap:6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                অ্যাডমিন লগইন
+            </h3>
+            <button class="close-icon-btn" type="button" onclick="closeAdminAuthModal()">✕</button>
+        </div>
+        <form onsubmit="handleAdminAuth(event)">
+            <div class="form-grid single-col">
+                <div class="field-group">
+                    <label>👤 ইউজার সিলেক্ট করুন</label>
+                    <div class="input-wrapper">
+                        <select id="adminUser" required>
+                            <option value="">-- ইউজার বেছে নিন --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label>🔒 পাসওয়ার্ড</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="adminPass" placeholder="পাসওয়ার্ড দিন" required>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button type="submit" class="btn btn-search">লগইন করুন</button>
+                <button type="button" class="btn btn-clear" onclick="closeAdminAuthModal()">বাতিল</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="profileModal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="color:var(--neon-green); display:flex; align-items:center; gap:6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                প্রফাইল এডিট
+            </h3>
+            <button class="close-icon-btn" type="button" onclick="closeProfileModal()">✕</button>
+        </div>
+        <form onsubmit="saveProfileChanges(event)">
+            <div class="form-grid single-col">
+                <div class="field-group">
+                    <label>নাম</label>
+                    <div class="input-wrapper"><input type="text" id="editProfileName" required></div>
+                </div>
+                <div class="field-group">
+                    <label>পদবি (Title)</label>
+                    <div class="input-wrapper"><input type="text" id="editProfileTitle" required></div>
+                </div>
+                <div class="field-group">
+                    <label>নতুন পাসওয়ার্ড (ঐচ্ছিক)</label>
+                    <div class="input-wrapper"><input type="password" id="editProfilePass" placeholder="পরিবর্তন না করতে চাইলে ফাঁকা রাখুন"></div>
+                </div>
+                <div class="field-group">
+                    <label>প্রফাইল ছবি</label>
+                    <input type="file" id="editProfileImg" accept="image/*" style="height:auto; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--input-bg); color:#fff;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button type="submit" class="btn btn-search">সেভ করুন</button>
+                <button type="button" class="btn btn-clear" onclick="closeProfileModal()">বাতিল</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editDeviceModal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="color:var(--neon-green); display:flex; align-items:center; gap:6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green);"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                ডিভাইস এডিট করুন
+            </h3>
+            <button class="close-icon-btn" type="button" onclick="closeEditDeviceModal()">✕</button>
+        </div>
+        <form onsubmit="handleUpdateDevice(event)">
+            <input type="hidden" id="editDeviceId">
+            <div class="form-grid">
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg> Panel No</label>
+                    <div class="input-wrapper"><select id="editPanel" required></select></div>
+                </div>
+                <div class="field-group">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Type</label>
+                    <div class="input-wrapper">
+                        <select id="editCategory" onchange="updateEditSubOptions()" required>
+                            <option value="loop">Loop</option>
+                            <option value="panel_nac">Panel Nac</option>
+                            <option value="nac_std">NAC Standard</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label id="editSubLabel">➰ Loop No</label>
+                    <div class="input-wrapper"><select id="editSubVal" required></select></div>
+                </div>
+                
+                <div class="field-group">
+                    <label id="editNumLabel">🔢 Address No.</label>
+                    <div class="input-wrapper"><input type="number" id="editAddress" required min="0"></div>
+                </div>
+                <div class="field-group">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 13l-7 7-10-10V4h6z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg> Code (Type)</label>
+                    <div class="input-wrapper">
+                        <select id="editCode" onchange="checkEditCustomFields()" required>
+                            <option value="">ডিভাইস টাইপ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group full-width" id="editIsoFieldGroup" style="display:none;">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> ISO পজিশন বিবরণ</label>
+                    <div class="input-wrapper"><input type="text" id="editIsoInfo" placeholder="ISO বিবরণ থাকলে লিখুন"></div>
+                </div>
+
+                <div class="field-group full-width" id="editCustomSounderGroup" style="display:none;">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18 6a9 9 0 0 1 0 12"></path></svg> সাউন্ডারের নাম</label>
+                    <div class="input-wrapper"><input type="text" id="editCustomSounder" placeholder="যেমন: System Sensor Horn"></div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 13l-7 7-10-10V4h6z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg> প্রোডাক্ট মডেল নম্বর</label>
+                    <div class="input-wrapper"><input type="text" id="editModelNo" placeholder="যেমন: ALCP-100 / VF6011-00"></div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg> নোট (NOTE)</label>
+                    <div class="input-wrapper"><input type="text" id="editNote" placeholder="নোট"></div>
+                </div>
+
+                <div class="field-group full-width">
+                    <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"></path><circle cx="12" cy="10" r="2.5"></circle></svg> লোকেশন তথ্য</label>
+                    <div class="input-wrapper"><input type="text" id="editLocation" required placeholder="যেমন: FAL 35 East side"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button type="submit" class="btn btn-search">💾 আপডেট সেভ</button>
+                <button type="button" class="btn btn-clear" onclick="closeEditDeviceModal()">বাতিল</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="resultModal" class="modal-overlay">
+    <div class="modal-card" id="modalCardContent">
+        </div>
+</div>
+
+<script>
+// ==================== FIREBASE CONFIGURATION ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyD5-r0i05HAhimsIVa-9bJnCee7Ee1WzZg",
+  authDomain: "fads12.firebaseapp.com",
+  projectId: "fads12",
+  storageBucket: "fads12.firebasestorage.app",
+  messagingSenderId: "378503692166",
+  appId: "1:378503692166:web:d011bc5a26be9fc897b607",
+  measurementId: "G-P5W4ZFJ8FG"
+};
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+function scrollToSec(id) {
+    const el = document.getElementById(id);
+    if(el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* DEFAULT ADMIN USERS CONFIGURATION */
+const defaultAdmins = {
+    "enamul": { username: "enamul", pass: "137853", name: "Khondokar Enamul Haque", title: "System Admin", photo: "https://via.placeholder.com/150/000000/39FF14?text=Enamul" },
+    "admin2": { username: "admin2", pass: "admin222", name: "Fire Safety Officer 1", title: "Assistant Inspector", photo: "https://via.placeholder.com/150/000000/00b0ff?text=Admin2" },
+    "admin3": { username: "admin3", pass: "admin333", name: "Fire Safety Officer 2", title: "Technical Supervisor", photo: "https://via.placeholder.com/150/000000/ff9800?text=Admin3" },
+    "technician1": { username: "technician1", pass: "tech123", name: "Technician Team A", title: "Lead Technician", photo: "https://via.placeholder.com/150/000000/e62b00?text=Tech1" },
+    "inspector1": { username: "inspector1", pass: "insp123", name: "Field Inspector", title: "Safety Officer", photo: "https://via.placeholder.com/150/000000/9c27b0?text=Insp1" },
+    "operator1": { username: "operator1", pass: "op1234", name: "Control Room Operator", title: "Control Operator", photo: "https://via.placeholder.com/150/000000/009688?text=Op1" },
+    "supervisor1": { username: "supervisor1", pass: "super123", name: "Shift Supervisor", title: "Field Supervisor", photo: "https://via.placeholder.com/150/000000/ff5722?text=Super1" }
+};
+
+let fireDevicesDB = [];
+let filteredDevicesList = [];
+let adminUsers = JSON.parse(localStorage.getItem('adminUsers')) || defaultAdmins;
+let activityLogs = [];
+
+let currentAdminUser = null;
+let isAdmin = false;
+let deviceChartInstance = null;
+
+// Realtime Sync for Devices Data
+db.collection("devices").onSnapshot((snapshot) => {
+    fireDevicesDB = [];
+    snapshot.forEach((doc) => {
+        let item = doc.data();
+        item.id = doc.id;
+        fireDevicesDB.push(item);
+    });
+    updateSummaryAndChart();
+    renderTable();
+}, (error) => {
+    console.error("Firebase Sync Error: ", error);
+});
+
+// Realtime Sync for Activity Logs
+db.collection("logs").orderBy("timestamp", "desc").limit(100).onSnapshot((snapshot) => {
+    activityLogs = [];
+    snapshot.forEach((doc) => {
+        activityLogs.push(doc.data());
+    });
+    renderActivityLogs();
+});
+
+function renderUserSelectDropdown() {
+    const userSelect = document.getElementById('adminUser');
+    if(!userSelect) return;
+    let options = '<option value="">-- ইউজার বেছে নিন --</option>';
+    Object.keys(adminUsers).forEach(key => {
+        const u = adminUsers[key];
+        options += `<option value="${u.username}">${u.name} (${u.title})</option>`;
+    });
+    userSelect.innerHTML = options;
+}
+
+function logActivity(actionText) {
+    if(!currentAdminUser) return;
+    const now = new Date().toLocaleString('bn-BD');
+    const logData = {
+        user: currentAdminUser.name,
+        username: currentAdminUser.username,
+        action: actionText,
+        time: now,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    db.collection("logs").add(logData);
+}
+
+function renderActivityLogs() {
+    const container = document.getElementById('activityLogList');
+    if(!container) return;
+    if(activityLogs.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-sub); font-size:11px;">কোনো এক্টিভিটি পাওয়া যায়নি।</div>';
+        return;
+    }
+    container.innerHTML = activityLogs.map(log => `
+        <div class="activity-log-item">
+            <div><span class="log-user">${log.user} (${log.username})</span>: ${log.action}</div>
+            <div class="log-time">
+                <svg viewBox="0 0 24 24" style="width:10px; height:10px; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                ${log.time}
+            </div>
+        </div>
+    `).join('');
+}
+
+function initPanels() {
+    const panelSelect = document.getElementById('panel');
+    const addPanelSelect = document.getElementById('addPanel');
+    const editPanelSelect = document.getElementById('editPanel');
+    const filterPanelSelect = document.getElementById('filterPanel');
+    
+    let options = '<option value="">প্যানেল বেছে নিন</option>';
+    let addOptions = '<option value="">প্যানেল বেছে নিন</option>';
+    let filterOptions = '<option value="">সকল প্যানেল</option>';
+
+    for (let i = 1; i <= 18; i++) {
+        options += `<option value="${i}">Panel ${i}</option>`;
+        addOptions += `<option value="${i}">Panel ${i}</option>`;
+        filterOptions += `<option value="${i}">Panel ${i}</option>`;
+    }
+    panelSelect.innerHTML = options;
+    addPanelSelect.innerHTML = addOptions;
+    editPanelSelect.innerHTML = addOptions;
+    filterPanelSelect.innerHTML = filterOptions;
+}
+
+function updateSearchSubOptions() {
+    const cat = document.getElementById('searchCategory').value;
+    const subSelect = document.getElementById('searchSubVal');
+    const subLabel = document.getElementById('searchSubLabel');
+    const addrLabel = document.getElementById('searchAddrLabel');
+
+    if (cat === 'loop') {
+        subSelect.innerHTML = '<option value="">Loop বেছে নিন</option>';
+        subLabel.innerText = 'LOOP NO (1-4)';
+        addrLabel.innerText = 'ডিভাইস নম্বর (ADDRESS)';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">Loop 0${i}</option>`;
+    } else if (cat === 'panel_nac') {
+        subSelect.innerHTML = '<option value="">PANEL NAC বেছে নিন</option>';
+        subLabel.innerText = 'PANEL NAC NO (1-4)';
+        addrLabel.innerText = 'সাউন্ডার নম্বর (SOUNDER)';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">P-Nac 0${i}</option>`;
+    } else if (cat === 'nac_std') {
+        subSelect.innerHTML = '<option value="">NAC STANDARD বেছে নিন</option>';
+        subLabel.innerText = 'NAC STANDARD NO (1-7)';
+        addrLabel.innerText = 'সাউন্ডার নম্বর (SOUNDER)';
+        for (let i = 1; i <= 7; i++) subSelect.innerHTML += `<option value="${i}">N-Std 0${i}</option>`;
+    } else {
+        subSelect.innerHTML = '<option value="">নির্বাচন করুন</option>';
+    }
+}
+
+function updateAdminSubOptions() {
+    const cat = document.getElementById('addCategory').value;
+    const subSelect = document.getElementById('addSubVal');
+    const subLabel = document.getElementById('addSubLabel');
+    const numLabel = document.getElementById('addNumLabel');
+    const deviceTypeSelect = document.getElementById('addType');
+
+    deviceTypeSelect.innerHTML = '<option value="">ডিভাইস টাইপ</option>';
+
+    if (cat === 'loop') {
+        subSelect.innerHTML = '<option value="">Loop বেছে নিন</option>';
+        subLabel.innerText = '➰ Loop No';
+        numLabel.innerText = '🔢 Address No.';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">Loop 0${i}</option>`;
+        
+        deviceTypeSelect.innerHTML += `
+            <option value="SD">SD (Smoke Detector)</option>
+            <option value="MD">MD (Multi Detector)</option>
+            <option value="HD">HD (Heat Detector)</option>
+            <option value="MCP">MCP (Manual Call Point)</option>
+            <option value="AIM">AIM (Input Module)</option>
+            <option value="AOM">AOM (Output Module)</option>
+            <option value="ISO">ISO (Fault Isolator Module)</option>
+        `;
+    } else if (cat === 'panel_nac') {
+        subSelect.innerHTML = '<option value="">PANEL NAC বেছে নিন</option>';
+        subLabel.innerText = '🔔 Panel Nac';
+        numLabel.innerText = '🔔 Sounder No.';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">P-Nac 0${i}</option>`;
+        setSounderOptions(deviceTypeSelect);
+    } else if (cat === 'nac_std') {
+        subSelect.innerHTML = '<option value="">NAC STANDARD বেছে নিন</option>';
+        subLabel.innerText = '🔔 NAC Standard';
+        numLabel.innerText = '🔔 Sounder No.';
+        for (let i = 1; i <= 7; i++) subSelect.innerHTML += `<option value="${i}">N-Std 0${i}</option>`;
+        setSounderOptions(deviceTypeSelect);
+    } else {
+        subSelect.innerHTML = '<option value="">নির্বাচন করুন</option>';
+    }
+    checkCustomDeviceTypeFields();
+}
+
+function updateEditSubOptions() {
+    const cat = document.getElementById('editCategory').value;
+    const subSelect = document.getElementById('editSubVal');
+    const subLabel = document.getElementById('editSubLabel');
+    const numLabel = document.getElementById('editNumLabel');
+    const deviceTypeSelect = document.getElementById('editCode');
+
+    deviceTypeSelect.innerHTML = '<option value="">ডিভাইস টাইপ</option>';
+    subSelect.innerHTML = '';
+    
+    if (cat === 'loop') {
+        subLabel.innerText = '➰ Loop No';
+        numLabel.innerText = '🔢 Address No.';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">Loop 0${i}</option>`;
+        
+        deviceTypeSelect.innerHTML += `
+            <option value="SD">SD (Smoke Detector)</option>
+            <option value="MD">MD (Multi Detector)</option>
+            <option value="HD">HD (Heat Detector)</option>
+            <option value="MCP">MCP (Manual Call Point)</option>
+            <option value="AIM">AIM (Input Module)</option>
+            <option value="AOM">AOM (Output Module)</option>
+            <option value="ISO">ISO (Fault Isolator Module)</option>
+        `;
+    } else if (cat === 'panel_nac') {
+        subLabel.innerText = '🔔 Panel Nac';
+        numLabel.innerText = '🔔 Sounder No.';
+        for (let i = 1; i <= 4; i++) subSelect.innerHTML += `<option value="${i}">P-Nac 0${i}</option>`;
+        setSounderOptions(deviceTypeSelect);
+    } else if (cat === 'nac_std') {
+        subLabel.innerText = '🔔 NAC Standard';
+        numLabel.innerText = '🔔 Sounder No.';
+        for (let i = 1; i <= 7; i++) subSelect.innerHTML += `<option value="${i}">N-Std 0${i}</option>`;
+        setSounderOptions(deviceTypeSelect);
+    }
+    checkEditCustomFields();
+}
+
+function setSounderOptions(selectEl) {
+    selectEl.innerHTML += `
+        <option value="Argos - AVS Sounder">Argos - AVS Sounder</option>
+        <option value="Argos - AS Sounder">Argos - AS Sounder</option>
+        <option value="Hochiki - H/S Sounder">Hochiki - H/S Sounder</option>
+        <option value="Hochiki - Horn Sounder">Hochiki - Horn Sounder</option>
+        <option value="Ves - H/S Sounder">Ves - H/S Sounder</option>
+        <option value="Ves - Horn Sounder">Ves - Horn Sounder</option>
+        <option value="Others">Others</option>
+    `;
+}
+
+function checkCustomDeviceTypeFields() {
+    const cat = document.getElementById('addCategory').value;
+    const typeVal = document.getElementById('addType').value;
+    const addressInput = document.getElementById('addAddress');
+
+    const isoGroup = document.getElementById('isoFieldGroup');
+    const customSounderGroup = document.getElementById('customSounderGroup');
+
+    if (cat === 'loop' && typeVal === 'ISO') {
+        isoGroup.style.display = 'flex';
+        addressInput.value = '';
+        addressInput.disabled = true;
+        addressInput.removeAttribute('required');
+        addressInput.placeholder = "ISO-র ডিভাইস নং নেই";
+    } else {
+        isoGroup.style.display = 'none';
+        addressInput.disabled = false;
+        addressInput.setAttribute('required', 'true');
+        addressInput.placeholder = "যেমন: ১";
+    }
+
+    customSounderGroup.style.display = (cat !== 'loop' && typeVal === 'Others') ? 'flex' : 'none';
+}
+
+function checkEditCustomFields() {
+    const cat = document.getElementById('editCategory').value;
+    const typeVal = document.getElementById('editCode').value;
+    const addressInput = document.getElementById('editAddress');
+
+    const isoGroup = document.getElementById('editIsoFieldGroup');
+    const customSounderGroup = document.getElementById('editCustomSounderGroup');
+
+    if (cat === 'loop' && typeVal === 'ISO') {
+        isoGroup.style.display = 'flex';
+        addressInput.value = '0';
+        addressInput.disabled = true;
+        addressInput.removeAttribute('required');
+    } else {
+        isoGroup.style.display = 'none';
+        addressInput.disabled = false;
+        addressInput.setAttribute('required', 'true');
+    }
+
+    customSounderGroup.style.display = (cat !== 'loop' && typeVal === 'Others') ? 'flex' : 'none';
+}
+
+function toggleAdminPrompt() {
+    if (isAdmin) {
+        logoutAdmin();
+    } else {
+        renderUserSelectDropdown();
+        document.getElementById('adminPass').value = '';
+        document.getElementById('adminAuthModal').classList.add('active');
+    }
+}
+
+function closeAdminAuthModal() {
+    document.getElementById('adminAuthModal').classList.remove('active');
+}
+
+function handleAdminAuth(e) {
+    e.preventDefault();
+    const u = document.getElementById('adminUser').value.trim();
+    const p = document.getElementById('adminPass').value.trim();
+
+    if (adminUsers[u] && adminUsers[u].pass === p) {
+        isAdmin = true;
+        currentAdminUser = adminUsers[u];
+        closeAdminAuthModal();
+        
+        document.getElementById('currentAdminName').innerText = currentAdminUser.name;
+        document.getElementById('currentAdminRole').innerText = currentAdminUser.title;
+        document.getElementById('currentAdminAvatar').src = currentAdminUser.photo;
+
+        document.getElementById('adminSection').style.display = 'block';
+        document.querySelectorAll('.admin-col').forEach(el => el.style.display = 'table-cell');
+        document.querySelectorAll('.batch-action-bar').forEach(el => el.style.display = 'flex');
+        
+        const navLabel = document.getElementById('adminNavLabel');
+        if (navLabel) navLabel.innerText = "Logout";
+        
+        logActivity("লগইন সম্পন্ন করেছেন।");
+        renderTable();
+        scrollToSec('adminSection');
+        alert(`✅ স্বাগতম, ${currentAdminUser.name}! অ্যাডমিন মোড সক্রিয়।`);
+    } else {
+        alert("❌ ভুল ইউজারনেম বা পাসওয়ার্ড!");
+    }
+}
+
+function logoutAdmin() {
+    if(currentAdminUser) logActivity("লগআউট করেছেন।");
+    isAdmin = false;
+    currentAdminUser = null;
+    document.getElementById('adminSection').style.display = 'none';
+    document.querySelectorAll('.admin-col').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.batch-action-bar').forEach(el => el.style.display = 'none');
+    const navLabel = document.getElementById('adminNavLabel');
+    if (navLabel) navLabel.innerText = "Admin";
+    renderTable();
+}
+
+function openProfileModal() {
+    if(!currentAdminUser) return;
+    document.getElementById('editProfileName').value = currentAdminUser.name;
+    document.getElementById('editProfileTitle').value = currentAdminUser.title;
+    document.getElementById('editProfilePass').value = '';
+    document.getElementById('profileModal').classList.add('active');
+}
+
+function closeProfileModal() {
+    document.getElementById('profileModal').classList.remove('active');
+}
+
+function saveProfileChanges(e) {
+    e.preventDefault();
+    if(!currentAdminUser) return;
+    const name = document.getElementById('editProfileName').value.trim();
+    const title = document.getElementById('editProfileTitle').value.trim();
+    const pass = document.getElementById('editProfilePass').value.trim();
+    const imgInput = document.getElementById('editProfileImg');
+
+    currentAdminUser.name = name;
+    currentAdminUser.title = title;
+    if(pass) currentAdminUser.pass = pass;
+
+    const applySave = () => {
+        adminUsers[currentAdminUser.username] = currentAdminUser;
+        localStorage.setItem('adminUsers', JSON.stringify(adminUsers));
+        document.getElementById('currentAdminName').innerText = currentAdminUser.name;
+        document.getElementById('currentAdminRole').innerText = currentAdminUser.title;
+        document.getElementById('currentAdminAvatar').src = currentAdminUser.photo;
+        logActivity("নিজস্ব প্রফাইল তথ্য আপডেট করেছেন।");
+        closeProfileModal();
+        alert("✅ প্রোফাইল সফলভাবে আপডেট করা হয়েছে!");
+    };
+
+    if(imgInput.files && imgInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            currentAdminUser.photo = evt.target.result;
+            applySave();
+        };
+        reader.readAsDataURL(imgInput.files[0]);
+    } else {
+        applySave();
+    }
+}
+
+function backupToMobile() {
+    const backupData = {
+        devices: fireDevicesDB,
+        logs: activityLogs,
+        timestamp: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `FireSystem_Backup_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logActivity("মোবাইল স্টোরেজে ডাটা ব্যাকআপ ডাউনলোড করেছেন।");
+}
+
+function backupToGoogleDrive() {
+    backupToMobile();
+    logActivity("গুগল ড্রাইভ ব্যাকআপ প্রক্রিয়া কল করেছেন।");
+    alert("ℹ️ মোবাইল ব্যাকআপ ফাইলটি তৈরি হয়েছে। অনুগ্রহ করে ফাইলটি আপনার Google Drive-এ আপলোড করে নিরাপদ রাখুন।");
+}
+
+function handleAddDevice(e) {
+    e.preventDefault();
+    if (!isAdmin) {
+        alert("⚠️ অনুমতি নেই! শুধুমাত্র অ্যাডমিন ডিভাইস ইনপুট করতে পারবেন।");
+        return;
+    }
+
+    const p = parseInt(document.getElementById('addPanel').value);
+    const cat = document.getElementById('addCategory').value;
+    const subVal = parseInt(document.getElementById('addSubVal').value);
+    const codeVal = document.getElementById('addType').value;
+    
+    let a = 0;
+    if (cat === 'loop' && codeVal === 'ISO') {
+        a = 0;
+    } else {
+        a = parseInt(document.getElementById('addAddress').value);
+    }
+
+    let code = codeVal;
+    if (cat !== 'loop' && code === 'Others') {
+        const customName = document.getElementById('addCustomSounder').value.trim();
+        code = customName ? customName : "Custom Sounder";
+    }
+
+    const isoInfo = document.getElementById('addIsoInfo').value.trim();
+    const modelNo = document.getElementById('addModelNo').value.trim();
+    const note = document.getElementById('addNote').value.trim();
+    const loc = document.getElementById('addLocation').value.trim();
+
+    const exists = fireDevicesDB.some(item => 
+        item.panel === p && 
+        item.category === cat && 
+        item.subVal === subVal && 
+        item.address === a
+    );
+
+    if (exists) {
+        alert(`⚠️ Panel ${p}-এর এই Loop/NAC (${subVal}) এবং Address (${a})-এ ইতোমধ্যে একটি ডিভাইস/সাউন্ডার রয়েছে! একই অ্যাড্রেসে ডাবল ডাটা এন্ট্রি করা সম্ভব নয়।`);
+        return;
+    }
+
+    const newDevice = { 
+        panel: p, 
+        category: cat, 
+        subVal: subVal, 
+        address: a, 
+        code: code, 
+        isoInfo: isoInfo, 
+        modelNo: modelNo, 
+        note: note, 
+        location: loc 
+    };
+
+    db.collection("devices").add(newDevice).then(() => {
+        logActivity(`নতুন ডিভাইস যুক্ত করেছেন: Panel ${p}, Type ${code}, Location ${loc}`);
+        document.getElementById('addDeviceForm').reset();
+        updateAdminSubOptions();
+        alert("✅ নতুন ডিভাইস সফলভাবে যুক্ত হয়েছে!");
+    }).catch(err => {
+        alert("❌ ত্রুটি: " + err.message);
+    });
+}
+
+function openEditDeviceModal(docId) {
+    if(!isAdmin) return;
+    const device = fireDevicesDB.find(item => item.id === docId);
+    if(!device) return;
+
+    document.getElementById('editDeviceId').value = device.id;
+    document.getElementById('editPanel').value = device.panel;
+    document.getElementById('editCategory').value = device.category;
+    
+    updateEditSubOptions();
+    document.getElementById('editSubVal').value = device.subVal;
+    
+    const codeSelect = document.getElementById('editCode');
+    let codeExists = Array.from(codeSelect.options).some(op => op.value === device.code);
+    if(!codeExists && device.category !== 'loop') {
+        codeSelect.value = 'Others';
+        document.getElementById('editCustomSounder').value = device.code;
+    } else {
+        codeSelect.value = device.code;
+    }
+
+    document.getElementById('editAddress').value = device.address;
+    document.getElementById('editIsoInfo').value = device.isoInfo || '';
+    document.getElementById('editModelNo').value = device.modelNo || '';
+    document.getElementById('editNote').value = device.note || '';
+    document.getElementById('editLocation').value = device.location || '';
+
+    checkEditCustomFields();
+    document.getElementById('editDeviceModal').classList.add('active');
+}
+
+function closeEditDeviceModal() {
+    document.getElementById('editDeviceModal').classList.remove('active');
+}
+
+function handleUpdateDevice(e) {
+    e.preventDefault();
+    if(!isAdmin) return;
+
+    const docId = document.getElementById('editDeviceId').value;
+    const p = parseInt(document.getElementById('editPanel').value);
+    const cat = document.getElementById('editCategory').value;
+    const subVal = parseInt(document.getElementById('editSubVal').value);
+    const codeVal = document.getElementById('editCode').value;
+
+    let code = codeVal;
+    if(cat !== 'loop' && codeVal === 'Others') {
+        const customName = document.getElementById('editCustomSounder').value.trim();
+        code = customName ? customName : "Custom Sounder";
+    }
+
+    let addressVal = parseInt(document.getElementById('editAddress').value);
+    if(cat === 'loop' && code === 'ISO') addressVal = 0;
+
+    const exists = fireDevicesDB.some(item => 
+        item.id !== docId && 
+        item.panel === p && 
+        item.category === cat && 
+        item.subVal === subVal && 
+        item.address === addressVal
+    );
+
+    if (exists) {
+        alert(`⚠️ Panel ${p}-এর এই Loop/NAC (${subVal}) এবং Address (${addressVal})-এ ইতোমধ্যে আরেকটি ডিভাইস/সাউন্ডার রয়েছে! ডুপ্লিকেট ডাটা আপডেট করা সম্ভব নয়।`);
+        return;
+    }
+
+    const updatedData = {
+        panel: p,
+        category: cat,
+        subVal: subVal,
+        address: addressVal,
+        code: code,
+        isoInfo: document.getElementById('editIsoInfo').value.trim(),
+        modelNo: document.getElementById('editModelNo').value.trim(),
+        note: document.getElementById('editNote').value.trim(),
+        location: document.getElementById('editLocation').value.trim()
+    };
+
+    db.collection("devices").doc(docId).update(updatedData).then(() => {
+        logActivity(`ডিভাইস তথ্য এডিট করেছেন: Panel ${updatedData.panel}, Address ${updatedData.address}`);
+        closeEditDeviceModal();
+        alert("✅ ডিভাইস তথ্য সফলভাবে আপডেট হয়েছে!");
+    }).catch(err => {
+        alert("❌ আপডেট ব্যর্থ হয়েছে: " + err.message);
+    });
+}
+
+function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    const countEl = document.getElementById('selectedCount');
+    if(countEl) countEl.innerText = selected.length;
+}
+
+function deleteDevice(docId, itemDetails) {
+    if (!isAdmin) return;
+    if (confirm("⚠️ আপনি কি নিশ্চিত এই ডিভাইসটি মুছে ফেলতে চান?")) {
+        db.collection("devices").doc(docId).delete().then(() => {
+            logActivity(`ডিভাইস ডিলিট করেছেন: ${itemDetails}`);
+            alert("🗑️ ডিভাইস মুছে ফেলা হয়েছে।");
+        }).catch(err => {
+            alert("❌ ত্রুটি: " + err.message);
+        });
+    }
+}
+
+function deleteSelectedDevices() {
+    if(!isAdmin) return;
+    const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if(selectedBoxes.length === 0) {
+        alert("⚠️ অনুগ্রহ করে অন্তত একটি ডিভাইস মার্ক/সিলেক্ট করুন!");
+        return;
+    }
+
+    if(confirm(`⚠️ আপনি কি সিলেক্ট করা ${selectedBoxes.length} টি ডিভাইস এক সাথে ডিলিট করতে চান?`)) {
+        let batch = db.batch();
+        selectedBoxes.forEach(box => {
+            const docRef = db.collection("devices").doc(box.value);
+            batch.delete(docRef);
+        });
+
+        batch.commit().then(() => {
+            logActivity(`${selectedBoxes.length} টি সিলেক্টেড ডিভাইস মুছে ফেলেছেন।`);
+            document.getElementById('selectAllCheckbox').checked = false;
+            alert("🗑️ সিলেক্টেড সব ডিভাইস ডিলিট করা হয়েছে!");
+        }).catch(err => alert("❌ ডিলিট ব্যর্থ হয়েছে: " + err.message));
+    }
+}
+
+function renderTable() {
+    const filterTxt = document.getElementById('filterText').value.toLowerCase();
+    const filterCode = document.getElementById('filterCode').value;
+    const filterPanel = document.getElementById('filterPanel').value;
+    const tbody = document.getElementById('deviceTableBody');
+    tbody.innerHTML = '';
+
+    filteredDevicesList = fireDevicesDB.filter(item => {
+        const matchText = item.location.toLowerCase().includes(filterTxt);
+        const matchCode = filterCode === "" || item.code === filterCode;
+        const matchPanel = filterPanel === "" || item.panel == filterPanel;
+        return matchText && matchCode && matchPanel;
+    });
+
+    filteredDevicesList.forEach((item) => {
+        const tr = document.createElement('tr');
+        let typeLabel = '';
+        if(item.category === 'loop') typeLabel = `Loop 0${item.subVal}`;
+        else if(item.category === 'panel_nac') typeLabel = `P-Nac 0${item.subVal}`;
+        else if(item.category === 'nac_std') typeLabel = `N-Std 0${item.subVal}`;
+
+        const itemDetails = `Panel ${item.panel}, Address ${item.address}, Type ${item.code}`;
+
+        tr.innerHTML = `
+            <td class="admin-col" style="display:${isAdmin ? 'table-cell' : 'none'}; text-align:center;">
+                <input type="checkbox" value="${item.id}" class="device-checkbox row-checkbox" onchange="updateSelectedCount()">
+            </td>
+            <td><b>P${item.panel}</b></td>
+            <td>${typeLabel}</td>
+            <td>${item.address === 0 ? 'N/A' : item.address}</td>
+            <td><span class="badge-type">${item.code}</span></td>
+            <td><span class="model-text">${item.modelNo || '-'}</span></td>
+            <td>
+                ${item.location} 
+                ${item.isoInfo ? `<br><small style="color:#00b0ff; font-weight:600;">⚡ ${item.isoInfo}</small>` : ''}
+                ${item.note ? `<br><small style="color:var(--text-sub);">📝 ${item.note}</small>` : ''}
+            </td>
+            <td class="admin-col" style="display:${isAdmin ? 'table-cell' : 'none'}; text-align:center;">
+                <div class="action-btn-group">
+                    <button class="action-icon-btn edit" title="Edit Device" onclick="openEditDeviceModal('${item.id}')">
+                        <svg viewBox="0 0 24 24" style="width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button class="action-icon-btn delete" title="Delete Device" onclick="deleteDevice('${item.id}', '${itemDetails}')">
+                        <svg viewBox="0 0 24 24" style="width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    updateSelectedCount();
+}
+
+function updateSummaryAndChart() {
+    const totalDevices = fireDevicesDB.length;
+    const uniquePanels = new Set(fireDevicesDB.map(item => item.panel)).size;
+    const uniqueLoops = new Set(fireDevicesDB.filter(item => item.category === 'loop').map(item => `${item.panel}-${item.subVal}`)).size;
+
+    const countSD = fireDevicesDB.filter(item => item.code === "SD").length;
+    const countHD = fireDevicesDB.filter(item => item.code === "HD").length;
+    const countMD = fireDevicesDB.filter(item => item.code === "MD").length;
+    const countMCP = fireDevicesDB.filter(item => item.code === "MCP").length;
+    const countAIM = fireDevicesDB.filter(item => item.code === "AIM").length;
+    const countAOM = fireDevicesDB.filter(item => item.code === "AOM").length;
+    const countISO = fireDevicesDB.filter(item => item.code === "ISO").length;
+    const countSounders = fireDevicesDB.filter(item => item.category !== 'loop').length;
+
+    document.getElementById('sumPanels').innerText = uniquePanels;
+    document.getElementById('sumLoops').innerText = uniqueLoops;
+    
+    document.getElementById('sumSD').innerText = countSD;
+    
+    document.getElementById('sumHD').innerText = countHD;
+    
+    document.getElementById('sumMD').innerText = countMD;
+    
+    document.getElementById('sumMCP').innerText = countMCP;
+    
+    document.getElementById('sumAIM').innerText = countAIM;
+    
+    document.getElementById('sumAOM').innerText = countAOM;
+    
+    document.getElementById('sumISO').innerText = countISO;
+    
+    document.getElementById('sumSounders').innerText = countSounders;
+    
+    document.getElementById('sumTotal').innerText = totalDevices;
+
+    const ctx = document.getElementById('deviceChart').getContext('2d');
+    if (deviceChartInstance) deviceChartInstance.destroy();
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, '#39FF14');
+    gradient.addColorStop(1, 'rgba(57, 255, 20, 0.1)');
+
+    deviceChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['SD', 'HD', 'MD', 'MCP', 'AIM', 'AOM', 'ISO', 'Sounders'],
+            datasets: [{
+                label: 'ডিভাইস সংখ্যা',
+                data: [countSD, countHD, countMD, countMCP, countAIM, countAOM, countISO, countSounders],
+                backgroundColor: gradient,
+                borderColor: '#39FF14',
+                borderWidth: 2,
+                borderRadius: 4,
+                hoverBackgroundColor: '#01C851'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(18, 22, 32, 0.9)',
+                    titleColor: '#39FF14',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(57, 255, 20, 0.3)',
+                    borderWidth: 1,
+                    padding: 10
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#8b95a5', font: { size: 10, family: 'JetBrains Mono', weight: 'bold' } }, grid: { display: false } },
+                y: { ticks: { color: '#8b95a5', font: { size: 10, family: 'JetBrains Mono' }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+function exportToExcel() {
+    if(fireDevicesDB.length === 0) {
+        alert("⚠️ এক্সপোর্ট করার মতো কোনো ডাটা নেই!");
+        return;
+    }
+    const exportData = fireDevicesDB.map(item => ({
+        "Panel": item.panel,
+        "Category": item.category,
+        "Sub/Loop No": item.subVal,
+        "Address": item.address === 0 ? "N/A" : item.address,
+        "Device Type (Code)": item.code,
+        "Model No": item.modelNo || "",
+        "Location": item.location,
+        "ISO Info": item.isoInfo || "",
+        "Note": item.note || ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Devices");
+    XLSX.writeFile(workbook, "Fire_Alarm_Devices.xlsx");
+    if(isAdmin) logActivity("এক্সেল রিপোর্টে সমস্ত ডাটা ডাউনলোড করেছেন।");
+}
+
+function downloadSampleExcel() {
+    const sampleData = [
+        { Panel: 1, Category: "loop", "Sub/Loop No": 1, Address: 1, "Device Type (Code)": "SD", "Model No": "ALCP-100", Location: "FAL Building East", "ISO Info": "", Note: "Sample Data" },
+        { Panel: 1, Category: "panel_nac", "Sub/Loop No": 1, Address: 1, "Device Type (Code)": "Hochiki - H/S Sounder", "Model No": "CH-10", Location: "FAL Building West", "ISO Info": "", Note: "Sounder Test" }
+    ];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sample");
+    XLSX.writeFile(wb, "Sample_Fire_Devices.xlsx");
+}
+
+function importExcelData() {
+    if (!isAdmin) {
+        alert("⚠️ শুধুমাত্র অ্যাডমিন ফাইল আপলোড করতে পারবেন!");
+        return;
+    }
+
+    const fileInput = document.getElementById('excelFileInput');
+    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+    if (!file) {
+        alert("⚠️ অনুগ্রহ করে একটি Excel বা CSV ফাইল সিলেক্ট করুন!");
+        return;
+    }
+
+    const allowed = ['.xlsx', '.xls', '.csv'];
+    const lowerName = file.name.toLowerCase();
+    if (!allowed.some(ext => lowerName.endsWith(ext))) {
+        alert("❌ শুধুমাত্র Excel (.xlsx/.xls) অথবা CSV ফাইল আপলোড করুন!");
+        fileInput.value = '';
+        return;
+    }
+
+    const uploadBtn = document.querySelector('[onclick*="importExcelData"]');
+    const oldText = uploadBtn ? uploadBtn.innerHTML : '';
+
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '⏳ ডাটা প্রসেস হচ্ছে...';
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {
+                type: 'array',
+                cellDates: true
+            });
+
+            if (!workbook.SheetNames.length) {
+                throw new Error("Worksheet পাওয়া যায়নি");
+            }
+
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, {
+                defval: '',
+                raw: true,
+                blankrows: false
+            });
+
+            if (!rows.length) {
+                alert("⚠️ সিলেক্ট করা ফাইলে কোনো ডাটা পাওয়া যায়নি!");
+                return;
+            }
+
+            const get = (row, names) => {
+                for (const n of names) {
+                    if (row[n] !== undefined && row[n] !== null &&
+                        String(row[n]).trim() !== '') return row[n];
+                }
+                return '';
+            };
+
+            const num = value => {
+                if (value === '' || value === null || value === undefined) return NaN;
+                const n = Number(String(value).trim());
+                return Number.isFinite(n) ? n : parseInt(String(value).trim(), 10);
+            };
+
+            const validRows = [];
+            const invalidRows = [];
+
+            rows.forEach((row, i) => {
+                const excelRow = i + 2;
+
+                const panel = num(get(row, ['Panel', 'panel', 'Panel No', 'panelNo']));
+                const category = String(
+                    get(row, ['Category', 'category', 'Type', 'type']) || 'loop'
+                ).trim().toLowerCase();
+
+                const subVal = num(get(row, [
+                    'Sub/Loop No', 'Sub Loop No', 'subVal', 'sub',
+                    'Loop No', 'loopNo'
+                ]));
+
+                const rawAddress = get(row, [
+                    'Address', 'address', 'Address No', 'addressNo'
+                ]);
+
+                const address =
+                    String(rawAddress).trim().toUpperCase() === 'N/A' ||
+                    rawAddress === '' ? 0 : num(rawAddress);
+
+                const code = String(
+                    get(row, [
+                        'Device Type (Code)', 'Device Type',
+                        'Code (Type)', 'code', 'Code'
+                    ]) || 'SD'
+                ).trim();
+
+                const modelNo = String(
+                    get(row, ['Model No', 'Model Number', 'modelNo', 'model']) || ''
+                ).trim();
+
+                const location = String(
+                    get(row, ['Location', 'location', 'Location Info', 'locationInfo']) || ''
+                ).trim();
+
+                const isoInfo = String(
+                    get(row, ['ISO Info', 'ISO', 'isoInfo']) || ''
+                ).trim();
+
+                const note = String(
+                    get(row, ['Note', 'note', 'Remarks', 'remarks']) || ''
+                ).trim();
+
+                if (
+                    Number.isInteger(panel) && panel > 0 &&
+                    Number.isInteger(subVal) && subVal > 0 &&
+                    Number.isInteger(address) && address >= 0 &&
+                    location
+                ) {
+                    validRows.push({
+                        panel, category, subVal, address,
+                        code, modelNo, location, isoInfo, note
+                    });
+                } else {
+                    invalidRows.push(excelRow);
+                }
+            });
+
+            if (!validRows.length) {
+                alert("❌ কোনো valid data পাওয়া যায়নি। Panel, Sub/Loop No, Address ও Location চেক করুন।");
+                return;
+            }
+
+            // Include database data and newly accepted rows in duplicate checking.
+            const existingKeys = new Set(
+                fireDevicesDB.map(item =>
+                    `${item.panel}|${item.category}|${item.subVal}|${item.address}`
+                )
+            );
+
+            let addedCount = 0;
+            let duplicateCount = 0;
+            let failedCount = 0;
+
+            // Firestore allows max 500 writes per batch.
+            // 450 keeps a safe margin.
+            const BATCH_SIZE = 450;
+
+            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+                const chunk = validRows.slice(i, i + BATCH_SIZE);
+                const batch = db.batch();
+                let writesInBatch = 0;
+
+                chunk.forEach(item => {
+                    const key =
+                        `${item.panel}|${item.category}|${item.subVal}|${item.address}`;
+
+                    if (existingKeys.has(key)) {
+                        duplicateCount++;
+                        return;
+                    }
+
+                    const ref = db.collection("devices").doc();
+
+                    batch.set(ref, {
+                        panel: item.panel,
+                        category: item.category,
+                        subVal: item.subVal,
+                        address: item.address,
+                        code: item.code,
+                        modelNo: item.modelNo,
+                        location: item.location,
+                        isoInfo: item.isoInfo,
+                        note: item.note
+                    });
+
+                    existingKeys.add(key);
+                    writesInBatch++;
+                });
+
+                if (writesInBatch > 0) {
+                    try {
+                        await batch.commit();
+                        addedCount += writesInBatch;
+                    } catch (err) {
+                        console.error("Firestore batch error:", err);
+                        failedCount += writesInBatch;
+                    }
+                }
+
+                if (uploadBtn) {
+                    const processed = Math.min(i + chunk.length, validRows.length);
+                    const percent = Math.round(processed / validRows.length * 100);
+                    uploadBtn.innerHTML = `⏳ আপলোড হচ্ছে... ${percent}%`;
+                }
+            }
+
+            if (isAdmin && addedCount > 0) {
+                logActivity(`বাল্ক Excel/CSV আপলোড করে ${addedCount} টি ডিভাইস যুক্ত করেছেন।`);
+            }
+
+            fileInput.value = '';
+
+            let msg =
+                `✅ সফলভাবে ${addedCount} টি ডিভাইস আপলোড হয়েছে!\n` +
+                `⚠️ ডুপ্লিকেট: ${duplicateCount} টি\n` +
+                `⚠️ Invalid/অসম্পূর্ণ Row: ${invalidRows.length} টি`;
+
+            if (failedCount) msg += `\n❌ Failed: ${failedCount} টি`;
+
+            if (invalidRows.length && invalidRows.length <= 20) {
+                msg += `\n\nInvalid Excel Row: ${invalidRows.join(', ')}`;
+            }
+
+            alert(msg);
+
+            updateSummaryAndChart();
+            renderTable();
+
+        } catch (err) {
+            console.error("Excel/CSV Import Error:", err);
+            alert(
+                "❌ ফাইল প্রসেস করার সময় সমস্যা হয়েছে!\n\n" +
+                "Excel/CSV format ও column header চেক করুন।\n\n" +
+                "Error: " + (err.message || err)
+            );
+        } finally {
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = oldText || '📤 Bulk Upload';
+            }
+        }
+    };
+
+    reader.onerror = function() {
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = oldText || '📤 Bulk Upload';
+        }
+        alert("❌ ফাইলটি পড়তে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    };
+
+    // Correct FileReader API:
+    reader.readAsArrayBuffer(file);
+}
+function handleSearch(e) {
+    e.preventDefault();
+    const p = parseInt(document.getElementById('panel').value);
+    const cat = document.getElementById('searchCategory').value;
+    const subVal = parseInt(document.getElementById('searchSubVal').value);
+    const a = parseInt(document.getElementById('address').value);
+
+    const found = fireDevicesDB.find(item => 
+        item.panel === p && 
+        item.category === cat &&
+        item.subVal === subVal && 
+        item.address === a
+    );
+
+    const modalContent = document.getElementById('modalCardContent');
+    const modalOverlay = document.getElementById('resultModal');
+
+    if (found) {
+        let typeText = '';
+        if(found.category === 'loop') typeText = `Loop 0${found.subVal}`;
+        else if(found.category === 'panel_nac') typeText = `P-Nac 0${found.subVal}`;
+        else if(found.category === 'nac_std') typeText = `N-Std 0${found.subVal}`;
+
+        modalContent.className = 'modal-card success-glow';
+        modalContent.innerHTML = `
+            <div class="popup-header">
+                <div class="popup-header-title">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green); width:24px; height:24px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    DEVICE LOCATED
+                </div>
+                <button class="close-icon-btn" onclick="closeModal()">✕</button>
+            </div>
+            
+            <div class="popup-location-card">
+                <div class="loc-icon">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--neon-green); width:24px; height:24px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div class="loc-details">
+                    <div class="loc-title">লোকেশন বিস্তারিত:</div>
+                    <div class="loc-text">${found.location}</div>
+                </div>
+            </div>
+
+            <div class="popup-info-grid">
+                <div class="popup-info-item">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg> Panel</span>
+                    <span class="item-val">Panel ${found.panel}</span>
+                </div>
+                <div class="popup-info-item">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg> Loop/NAC</span>
+                    <span class="item-val">${typeText}</span>
+                </div>
+                <div class="popup-info-item">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> Address</span>
+                    <span class="item-val">${found.address === 0 ? 'N/A' : found.address}</span>
+                </div>
+                <div class="popup-info-item">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Type</span>
+                    <span class="item-val highlight">${found.code}</span>
+                </div>
+                ${found.modelNo ? `
+                <div class="popup-info-item full">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> Model</span>
+                    <span class="item-val" style="color:var(--accent-blue);">${found.modelNo}</span>
+                </div>` : ''}
+                ${found.isoInfo ? `
+                <div class="popup-info-item full" style="border-color: rgba(0, 176, 255, 0.3);">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> ISO Position</span>
+                    <span class="item-val" style="color:#00b0ff; text-align:right;">${found.isoInfo}</span>
+                </div>` : ''}
+                ${found.note ? `
+                <div class="popup-info-item full">
+                    <span class="item-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Note</span>
+                    <span class="item-val" style="color:var(--text-sub); font-weight:normal; text-align:right;">${found.note}</span>
+                </div>` : ''}
+            </div>
+
+            <button class="btn btn-search" style="width:100%; border-radius:12px; margin-top:10px;" onclick="closeModal()">বন্ধ করুন</button>
+        `;
+    } else {
+        modalContent.className = 'modal-card error-glow';
+        modalContent.innerHTML = `
+            <div class="popup-header">
+                <div class="popup-header-title" style="color:var(--danger);">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--danger); width:24px; height:24px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    NOT FOUND
+                </div>
+                <button class="close-icon-btn" onclick="closeModal()">✕</button>
+            </div>
+            
+            <div style="text-align:center; padding: 30px 10px; color:var(--text-sub); font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:16px;">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:var(--border); width:48px; height:48px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                এই প্যানেল, টাইপ বা অ্যাড্রেস নম্বরের সাথে মিলে এমন কোনো ডিভাইস তথ্য পাওয়া যায়নি!
+            </div>
+
+            <button class="btn btn-clear" style="width:100%; border-radius:12px; margin-top:10px;" onclick="closeModal()">বন্ধ করুন</button>
+        `;
+    }
+
+    modalOverlay.classList.add('active');
+}
+
+function closeModal() { document.getElementById('resultModal').classList.remove('active'); }
+function resetSearchForm() { 
+    document.getElementById('searchForm').reset();
+    updateSearchSubOptions();
+}
+
+initPanels();
+updateSearchSubOptions();
+updateAdminSubOptions();
+</script>
+
+</body>
+</html>
